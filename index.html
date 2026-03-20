@@ -1,68 +1,79 @@
 <script>
-    // 1. Bộ não thợ đào: Đã thêm bộ đếm Hash và tính năng Throttle (Nghỉ)
+    // 1. Thợ đào - Đã thêm báo lỗi nếu không nổ máy được
     const workerCode = `
         self.onmessage = function(e) {
             const { throttle, threadId } = e.data;
-            let hashCount = 0;
+            let count = 0;
 
-            // Hàm báo cáo tốc độ về máy chính mỗi giây
+            // Gửi báo cáo về sau mỗi 1 giây
             setInterval(() => {
-                self.postMessage({ threadId, hashes: hashCount });
-                hashCount = 0; // Reset để tính cho giây tiếp theo
+                self.postMessage({ id: threadId, hashes: count });
+                count = 0; 
             }, 1000);
 
-            function cày() {
+            function work() {
                 const start = Date.now();
-                // Ép CPU làm việc trong khoảng thời gian (1 - throttle)
-                // Ví dụ throttle 0.2 thì làm 800ms, nghỉ 200ms
+                // Ép CPU chạy trong (1 - throttle) giây
                 while (Date.now() - start < (1000 * (1 - throttle))) {
-                    for (let i = 0; i < 500; i++) {
-                        Math.sqrt(Math.random() * Math.random());
-                        hashCount++; 
+                    for (let i = 0; i < 1000; i++) {
+                        Math.sqrt(Math.random() * 5);
+                        count++;
                     }
                 }
-                // Nghỉ một chút để CPU không bị quá nhiệt 100%
-                setTimeout(cày, throttle * 1000); 
+                setTimeout(work, throttle * 1000);
             }
-            cày();
+            work();
         };
     `;
 
-    const blob = new Blob([workerCode], { type: 'application/javascript' });
-    const workerUrl = URL.createObjectURL(blob);
-    const threads = {};
+    try {
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerUrl = URL.createObjectURL(blob);
+        const threadStats = {};
 
-    function nổMáy80PhầnTrăm() {
-        const numThreads = navigator.hardwareConcurrency || 4;
-        // THROTTLE = 0.2 tức là nghỉ 20%, làm việc 80% CPU
-        const throttleValue = 0.2; 
+        function nổMáy() {
+            // Tự động lấy số nhân, tối thiểu là 4
+            const numThreads = navigator.hardwareConcurrency || 4;
+            const throttle = 0.2; // 80% CPU
 
-        console.log("Hệ thống: Huy động " + numThreads + " thợ đào. Giới hạn 80% CPU.");
+            console.log("%c [HỆ THỐNG]: Đang điều động " + numThreads + " quân đoàn... ", "color: yellow; background: black;");
 
-        for (let i = 0; i < numThreads; i++) {
-            const worker = new Worker(workerUrl);
-            worker.postMessage({ throttle: throttleValue, threadId: i + 1 });
-            
-            worker.onmessage = function(e) {
-                threads[e.data.threadId] = e.data.hashes;
-            };
+            for (let i = 0; i < numThreads; i++) {
+                const worker = new Worker(workerUrl);
+                
+                worker.onmessage = function(e) {
+                    threadStats[e.data.id] = e.data.hashes;
+                };
+
+                worker.onerror = function(err) {
+                    console.error("Thợ đào " + (i+1) + " hy sinh vì lỗi: ", err);
+                };
+
+                worker.postMessage({ throttle, threadId: i + 1 });
+            }
+
+            // In Hashrate tổng ra màn hình
+            setInterval(() => {
+                let total = 0;
+                for (let id in threadStats) {
+                    total += threadStats[id];
+                }
+                
+                // Công thức tính Hashrate (H/s) giả lập dựa trên sức mạnh CPU
+                const hashrate = (total / 450).toFixed(2); 
+
+                if (total > 0) {
+                    console.log("%c 🚀 TỐC ĐỘ ĐÀO HIỆN TẠI: " + hashrate + " H/s ", "color: white; background: #2ecc71; font-size: 16px; padding: 5px; border-radius: 5px;");
+                    console.log("Chi tiết: " + total + " phép tính/giây trên " + numThreads + " nhân.");
+                } else {
+                    console.log("%c ⏳ Đang nổ máy, đợi tí ông giáo... ", "color: #f1c40f;");
+                }
+            }, 2000);
         }
 
-        // Cứ mỗi 2 giây thì tổng hợp lại và in ra Hashrate tổng
-        setInterval(() => {
-            let totalHashes = 0;
-            for (let id in threads) {
-                totalHashes += threads[id];
-            }
-            // Chia cho 1000 để ra chỉ số H/s dễ nhìn (giả lập tốc độ thuật toán)
-            const hashrate = (totalHashes / 500).toFixed(2); 
-            
-            console.clear();
-            console.log("%c ⚙️ HỆ THỐNG ĐANG CHẠY (MỨC 80%) ", "background: orange; color: black; font-weight: bold; padding: 5px;");
-            console.log("%c TỔNG TỐC ĐỘ: " + hashrate + " H/s ", "background: green; color: white; font-size: 18px; padding: 5px;");
-            console.log("Số thợ đang hoạt động: " + numThreads);
-        }, 2000);
-    }
+        nổMáy();
 
-    setTimeout(nổMáy80PhầnTrăm, 1000);
+    } catch (err) {
+        console.error("Cái trình duyệt này không cho đào rồi ông giáo: ", err);
+    }
 </script>

